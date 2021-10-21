@@ -14,10 +14,11 @@ if __name__ == '__main__':
 
     # create listening socket
     server_socket = socket(AF_INET, SOCK_STREAM)
-    server_socket.connect(('127.0.0.1', port))
+    server_socket.bind(('127.0.0.1', port))
 
     print("Starting server")
     while True:
         break
 
     server_socket.close()
+    print('Shutting down server')

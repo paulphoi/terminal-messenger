@@ -1,6 +1,21 @@
 from socket import *
-from threading import Thread;
+from threading import Thread
+import time
 import sys
+
+# Thread for a blocked username
+class Blocking_thread(Thread):
+    def __init__(self, username, block_duration):
+        Thread.__init__(self)
+        self.username = username
+        self.block_duration = block_duration
+    
+    def run(self):
+        global blocked_users
+        blocked_users.append(self.username)
+        time.sleep(block_duration)
+        blocked_users.remove(self.username)
+        
 
 # Thread for each client connection
 class Client_thread(Thread):
@@ -15,7 +30,12 @@ class Client_thread(Thread):
     def run(self):
         # login client 
         self.login()
-            
+    
+    def block_username(self, username):
+        global block_duration
+        blocking_thread = Blocking_thread(username, block_duration)
+        blocking_thread.start()
+        
     
     # logs in client
     def login(self):
@@ -41,19 +61,34 @@ class Client_thread(Thread):
             
             # send confirmation message to client if matching username is found
             if existing_username:
-                self.client_socket.sendall("1".encode("utf-8"))
+                f.close()
+                # If username is currently blocked
+                global blocked_users
+                if username_input in blocked_users:
+                    self.client_socket.sendall("1".encode("utf-8"))
+                    print("Client inputted username is currently blocked")
+                    return
+
+                self.client_socket.sendall("0".encode("utf-8"))
                 data = self.client_socket.recv(1024)
                 password_input = data.decode()
                 # Attempt login up to three times before blocking username for set period
+                attempts = 1
                 while password_input != password:
-                    self.client_socket.sendall("Incorrect password".encode("utf-8"))
+                    if attempts == 3:
+                        print(f"Exhausted authentication attempts, username: {username_input} blocked for {block_duration} seconds")
+                        self.client_socket.sendall("username blocked".encode("utf-8"))
+                        self.block_username(username_input)
+                        return
+                    self.client_socket.sendall(f"Incorrect password, attempt {attempts}".encode("utf-8"))
                     data = self.client_socket.recv(1024)
                     password_input = data.decode()
-                    f.close()
+                    attempts += 1
+
                 print(f"Logged in user: '{username_input}'")
             # create new user if no matching username is found
             else:
-                self.client_socket.sendall("0".encode("utf-8"))
+                self.client_socket.sendall("2".encode("utf-8"))
                 data = self.client_socket.recv(1024)
                 password_input = data.decode()
                 # append username and password to credentials
@@ -63,8 +98,7 @@ class Client_thread(Thread):
             
             
             # send login confirmation to client and add username to list of active users
-            client_socket.sendall("login successful".encode("utf-8"))
-            print(username_input)
+            self.client_socket.sendall("login successful".encode("utf-8"))
             self.is_logged_in = True
             global active_users
             active_users.append(username_input)
@@ -87,6 +121,9 @@ if __name__ == '__main__':
 
     # list of active users
     active_users = []
+
+    # list of currently blocked users
+    blocked_users = []
 
     print("Starting server")
     while True:

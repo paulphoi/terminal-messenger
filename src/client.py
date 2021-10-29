@@ -25,31 +25,44 @@ if __name__ == '__main__':
     is_logged_in = False
 
     # if username exists
-    if message == "1":
+    if message == "0":
         while not is_logged_in:
             password = input("Enter password: ")
             client_socket.sendall(password.encode("utf-8"))
             data = client_socket.recv(1024)
             message = data.decode()
             # Repeat if password is incorrect
-            if message == "Incorrect password":
+            if message != "login successful":
+                # Quit if more than 3 consecutive incorrect attempts
+                if message == "username blocked":
+                    client_socket.close()
+                    print("Too many incorrect attempts, username blocked")
+                    exit()
                 print(message)
                 continue
             is_logged_in = True
+        print(f"Welcome {username}")
+
+    # if username is currently blocked
+    if message == "1":
+        print("Entered username is currently blocked")
 
     # if username does not exist
-    else:
+    if message == "2":
         new_password = input("Create password: ")
         client_socket.sendall(new_password.encode("utf-8"))
         data = client_socket.recv(1024)
         message = data.decode()
         if message == "login successful":
             is_logged_in = True
+        print(f"Welcome {username}")
     
-    print(f"Welcome {username}")
+    
 
-    while True:
-        break  
+    while True and is_logged_in:
+        if input() == 'q':
+            break 
+
     
     # Close socket
     client_socket.close()

@@ -60,9 +60,14 @@ if __name__ == '__main__':
     
 
     while True and is_logged_in:
-        if input() == 'q':
-            break 
+        user_input = input()
 
-    
+        # break loop if logout command issued
+        if (user_input == "logout"):
+            is_logged_in = False
+            # send logout signal to server
+            client_socket.sendall("logout".encode('utf-8'))
+
+
     # Close socket
     client_socket.close()

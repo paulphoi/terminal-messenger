@@ -25,14 +25,32 @@ class Client_thread(Thread):
         self.client_socket = client_socket
         self.is_logged_in = False
         self.is_alive = True
+        self.user = None
         print("New conection created for: ", client_address)
 
     def run(self):
         # login client 
         self.login()
+        # Process commands
+        while self.is_alive and self.is_logged_in:
+            data = self.client_socket.recv(1024)
+            command = data.decode()
+            # handle logout
+            if command == "logout":
+                self.logout()
+        
+        # close socket
+        print("Close connection with: ", self.client_address)
+        self.client_socket.close()
+
+    def logout(self):
+        self.is_logged_in = False
+        print(f"User {self.user} has logged out")
+        # remove from list of active users
+        active_users.remove(self.user)
+
     
     def block_username(self, username):
-        global block_duration
         blocking_thread = Blocking_thread(username, block_duration)
         blocking_thread.start()
         
@@ -42,11 +60,6 @@ class Client_thread(Thread):
         while self.is_alive and not self.is_logged_in:
             data = self.client_socket.recv(1024)
             username_input = data.decode()
-
-            if username_input == '':
-                self.is_alive = False
-                print("===== the user disconnected - ", client_address)
-                break
 
             # open credentials.txt
             f = open("credentials.txt", "r+")
@@ -63,7 +76,6 @@ class Client_thread(Thread):
             if existing_username:
                 f.close()
                 # If username is currently blocked
-                global blocked_users
                 if username_input in blocked_users:
                     self.client_socket.sendall("1".encode("utf-8"))
                     print("Client inputted username is currently blocked")
@@ -99,8 +111,8 @@ class Client_thread(Thread):
             
             # send login confirmation to client and add username to list of active users
             self.client_socket.sendall("login successful".encode("utf-8"))
+            self.user = username_input
             self.is_logged_in = True
-            global active_users
             active_users.append(username_input)
                         
 

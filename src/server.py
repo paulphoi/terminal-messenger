@@ -56,7 +56,7 @@ class Client_thread(Thread):
         # Send list of active users as \n separated string
         payload = ''
         for user in other_active_users:
-            payload += f"{user}\n"
+            payload += f"\n{user}"
 
         self.client_socket.sendall(payload.encode("utf-8"))
 

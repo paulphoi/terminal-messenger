@@ -67,7 +67,16 @@ if __name__ == '__main__':
             is_logged_in = False
             # send logout signal to server
             client_socket.sendall("logout".encode('utf-8'))
-
+        # handle whoelse 
+        if (user_input == "whoelse"):
+            client_socket.sendall("whoelse".encode('utf-8'))
+            data = client_socket.recv(1024)
+            active_users = data.decode()
+            # if client is the only active user
+            if active_users == '':
+                print("There are no other active users")
+            else:
+                print("Following users are currently active:{active_users}")
 
     # Close socket
     client_socket.close()

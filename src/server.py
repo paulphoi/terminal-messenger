@@ -38,10 +38,28 @@ class Client_thread(Thread):
             # handle logout
             if command == "logout":
                 self.logout()
+            
+            if command == "whoelse":
+                self.whoelse()
+                
         
         # close socket
         print("Close connection with: ", self.client_address)
         self.client_socket.close()
+
+    # return list of active users
+    def whoelse(self):
+        # obtain copy of active_users list
+        other_active_users = active_users.copy
+        # Remove requesting user from copied list
+        other_active_users.remove(self.user)
+        # Send list of active users as \n separated string
+        payload = ''
+        for user in other_active_users:
+            payload += f"{user}\n"
+
+        self.client_socket.sendall(payload.encode("utf-8"))
+
 
     def logout(self):
         self.is_logged_in = False
@@ -49,12 +67,10 @@ class Client_thread(Thread):
         # remove from list of active users
         active_users.remove(self.user)
 
-    
     def block_username(self, username):
         blocking_thread = Blocking_thread(username, block_duration)
         blocking_thread.start()
         
-    
     # logs in client
     def login(self):
         while self.is_alive and not self.is_logged_in:

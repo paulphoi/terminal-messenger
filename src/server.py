@@ -50,7 +50,7 @@ class Client_thread(Thread):
     # return list of active users
     def whoelse(self):
         # obtain copy of active_users list
-        other_active_users = active_users.copy
+        other_active_users = active_users.copy()
         # Remove requesting user from copied list
         other_active_users.remove(self.user)
         # Send list of active users as \n separated string
@@ -101,7 +101,7 @@ class Client_thread(Thread):
                 data = self.client_socket.recv(1024)
                 password_input = data.decode()
                 # Attempt login up to three times before blocking username for set period
-                attempts = 1
+                attempts = 0
                 while password_input != password:
                     if attempts == 3:
                         print(f"Exhausted authentication attempts, username: {username_input} blocked for {block_duration} seconds")

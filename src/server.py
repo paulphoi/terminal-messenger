@@ -69,8 +69,13 @@ class Client_thread(Thread):
     def logout(self):
         self.is_logged_in = False
         print(f"User {self.user} has logged out")
-        # remove from list of active users
+        # remove from list of active users and client_threads
         active_users.remove(self.user)
+        client_threads.pop(self.user)
+
+        # send logout presence notification to active users
+        for user in client_threads:
+            client_threads[user].client_socket.sendall(f"{self.user} logged out".encode("utf-8"))
 
     def block_username(self, username):
         blocking_thread = Blocking_thread(username, block_duration)

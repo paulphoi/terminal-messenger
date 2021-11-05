@@ -1,6 +1,27 @@
-from ctypes import memset
+from threading import Thread
 from socket import *
+import time
 import sys
+
+# Receiving thread
+class Rcv_thread(Thread):
+    def __init__(self, client_socket):
+        Thread.__init__(self)
+        self.client_socket = client_socket
+        self.is_running = True
+    
+    def run(self):
+        while self.is_running:
+            data = client_socket.recv(1024)
+            msg = data.decode()
+            if msg == '':
+                break
+            print(msg)
+        
+    
+    def end(self):
+        self.is_running = False
+        time.sleep(0.1)
 
 if __name__ == '__main__':
     # When command line ags are invalid
@@ -57,9 +78,11 @@ if __name__ == '__main__':
             is_logged_in = True
         print(f"Welcome {username}")
     
-    
-
+    # Start the receiving thread
+    rcv_thread = Rcv_thread(client_socket)
+    rcv_thread.start()
     while True and is_logged_in:
+
         user_input = input()
 
         # break loop if logout command issued
@@ -70,13 +93,15 @@ if __name__ == '__main__':
         # handle whoelse 
         if (user_input == "whoelse"):
             client_socket.sendall("whoelse".encode('utf-8'))
-            data = client_socket.recv(1024)
-            active_users = data.decode()
-            # if client is the only active user
-            if active_users == '':
-                print("There are no other active users")
-            else:
-                print("Following users are currently active:{active_users}")
+            # data = client_socket.recv(1024)
+            # active_users = data.decode()
+            # # if client is the only active user
+            # if active_users == '':
+            #     print("There are no other active users")
+            # else:
+            #     print(f"Following users are currently active:{active_users}")
 
-    # Close socket
+    rcv_thread.end()
     client_socket.close()
+
+

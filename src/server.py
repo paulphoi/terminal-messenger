@@ -105,9 +105,9 @@ class Client_thread(Thread):
                 data = self.client_socket.recv(1024)
                 password_input = data.decode()
                 # Attempt login up to three times before blocking username for set period
-                attempts = 0
+                attempts = 1
                 while password_input != password:
-                    if attempts == 3:
+                    if attempts > 3:
                         print(f"Exhausted authentication attempts, username: {username_input} blocked for {block_duration} seconds")
                         self.client_socket.sendall("username blocked".encode("utf-8"))
                         self.block_username(username_input)

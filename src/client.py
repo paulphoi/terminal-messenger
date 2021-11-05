@@ -84,23 +84,25 @@ if __name__ == '__main__':
     rcv_thread.start()
     while True and is_logged_in:
 
-        user_input = input()
+        # parse user input
+        input_string = input()
+        user_input = input_string.split(" ")
 
         # break loop if logout command issued
-        if (user_input == "logout"):
+        if (user_input[0] == "logout"):
+            if len(user_input) != 1:
+                print("Error. Invalid command")
             is_logged_in = False
             # send logout signal to server
             client_socket.sendall("logout".encode('utf-8'))
         # handle whoelse 
-        if (user_input == "whoelse"):
+        if (user_input[0] == "whoelse"):
+            if len(user_input) != 1:
+                print("Error. Invalid command")
             client_socket.sendall("whoelse".encode('utf-8'))
-            # data = client_socket.recv(1024)
-            # active_users = data.decode()
-            # # if client is the only active user
-            # if active_users == '':
-            #     print("There are no other active users")
-            # else:
-            #     print(f"Following users are currently active:{active_users}")
+        # handle broadcast
+        if (user_input[0] == "broadcast"): 
+            client_socket.sendall(input_string.encode("utf-8"))
 
     # call end in rcv_thread to stop listening and close the client_socket
     rcv_thread.end()

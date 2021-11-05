@@ -36,12 +36,17 @@ class Client_thread(Thread):
         while self.is_alive and self.is_logged_in:
             data = self.client_socket.recv(1024)
             command = data.decode()
+            command_list = command.split(" ")
+
             # handle logout
             if command == "logout":
                 self.logout()
             
             if command == "whoelse":
                 self.whoelse()
+
+            if command_list[0] == "broadcast":
+                self.broadcast(command[10:])
                 
         
         # close socket
@@ -64,6 +69,14 @@ class Client_thread(Thread):
             payload = payload.lstrip('\n')
         self.client_socket.sendall(payload.encode("utf-8"))
         print(f"Sent list of active users to {self.user}")
+
+    # broadcast message to all other users
+    def broadcast(self, message):
+        for user in client_threads:
+            # don't broadcast to self
+            if user != self.user:
+                client_threads[user].client_socket.sendall(f"{self.user}: {message}".encode("utf-8"))
+        print(f"User {self.user} broadcasted message '{message}'")
 
 
     def logout(self):

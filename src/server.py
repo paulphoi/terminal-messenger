@@ -1,6 +1,7 @@
 from socket import *
 from threading import Thread
 import time
+import datetime
 import sys
 
 # Thread for a blocked username
@@ -133,8 +134,13 @@ class Client_thread(Thread):
             self.client_socket.sendall("login successful".encode("utf-8"))
             self.user = username_input
             self.is_logged_in = True
-            active_users.append(username_input)
-                        
+
+            # send presence notifications to other active users then add new client 
+            for user in client_threads:
+                client_threads[user].client_socket.sendall(f"{self.user} logged in".encode("utf-8"))
+
+            client_threads[self.user] = self
+            active_users.append(self.user)
 
 if __name__ == '__main__':
     # When command line ags are invalid
@@ -157,6 +163,9 @@ if __name__ == '__main__':
     # list of currently blocked users
     blocked_users = []
 
+    # dictionary of client threads where key = username and value = Client_thread
+    client_threads = {}
+
     print("Starting server")
     while True:
         # listen for new client connections and create new connection threads as required
@@ -164,6 +173,7 @@ if __name__ == '__main__':
         client_socket, client_address = server_socket.accept()
         client_thread = Client_thread(client_address, client_socket)
         client_thread.start()
+
 
     server_socket.close()
     print('Shutting down server')

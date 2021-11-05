@@ -12,16 +12,17 @@ class Rcv_thread(Thread):
     
     def run(self):
         while self.is_running:
-            data = client_socket.recv(1024)
+            data = self.client_socket.recv(1024)
             msg = data.decode()
             if msg == '':
                 break
             print(msg)
         
+        self.client_socket.close()
+        
     
     def end(self):
         self.is_running = False
-        time.sleep(0.1)
 
 if __name__ == '__main__':
     # When command line ags are invalid
@@ -101,7 +102,7 @@ if __name__ == '__main__':
             # else:
             #     print(f"Following users are currently active:{active_users}")
 
+    # call end in rcv_thread to stop listening and close the client_socket
     rcv_thread.end()
-    client_socket.close()
 
 

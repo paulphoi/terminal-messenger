@@ -55,10 +55,14 @@ class Client_thread(Thread):
         other_active_users.remove(self.user)
         # Send list of active users as \n separated string
         payload = ''
-        for user in other_active_users:
-            payload += f"\n{user}"
-
+        for u in other_active_users:
+            print(u)
+            payload += f"\n{u}"
+        # Removing leading \n
+        if payload != '':
+            payload = payload.lstrip('\n')
         self.client_socket.sendall(payload.encode("utf-8"))
+        print(f"Sent list of active users to {self.user}")
 
 
     def logout(self):

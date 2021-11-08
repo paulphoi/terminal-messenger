@@ -47,11 +47,23 @@ class Client_thread(Thread):
 
             if command_list[0] == "broadcast":
                 self.broadcast(command[10:])
+            
+            if command_list[0] == "message":
+                message = ' '.join(command_list[2:])
+                self.message(command_list[1], message)
                 
         
         # close socket
         print("Close connection with: ", self.client_address)
         self.client_socket.close()
+
+    # sends message to recepient, if recepient is not active, add it to msg buffer
+    def message(self, recepient, message):
+        # if recepient is currently active
+        if recepient in active_users:
+            client_threads[recepient].client_socket.sendall(f"{self.user}: {message}".encode("utf-8"))
+
+
 
     # return list of active users
     def whoelse(self):
@@ -183,6 +195,9 @@ if __name__ == '__main__':
 
     # dictionary of client threads where key = username and value = Client_thread
     client_threads = {}
+
+    # dictionary that holds messages; key = username and value = list of messages
+    messages = {}
 
     print("Starting server")
     while True:

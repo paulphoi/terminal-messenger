@@ -99,10 +99,21 @@ if __name__ == '__main__':
         if (user_input[0] == "whoelse"):
             if len(user_input) != 1:
                 print("Error. Invalid command")
-            client_socket.sendall("whoelse".encode('utf-8'))
+            else:
+                client_socket.sendall("whoelse".encode('utf-8'))
         # handle broadcast
         if (user_input[0] == "broadcast"): 
             client_socket.sendall(input_string.encode("utf-8"))
+        # handle message
+        if (user_input[0] == "message"):
+            if len(user_input) < 3:
+                print("Usage: message <user> <message>")
+            # if recepient is self print error
+            elif user_input[2] == username:
+                print("You cannot send a message to yourself")
+            else:
+                client_socket.sendall(input_string.encode("utf-8"))
+
 
     # call end in rcv_thread to stop listening and close the client_socket
     rcv_thread.end()

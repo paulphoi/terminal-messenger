@@ -26,12 +26,17 @@ class Client_thread(Thread):
         self.client_socket = client_socket
         self.is_logged_in = False
         self.is_alive = True
-        self.user = None
+        self.username = None
+        self.user_details = None
         print("New conection created for: ", client_address)
 
     def run(self):
         # login client 
         self.login()
+        # send any messages that were sent to user when they were offline
+        for message in self.user_details['messages']:
+            self.client_socket.sendall(message.encode('utf-8'))
+
         # Process commands
         while self.is_alive and self.is_logged_in:
             data = self.client_socket.recv(1024)
@@ -59,10 +64,18 @@ class Client_thread(Thread):
 
     # sends message to recepient, if recepient is not active, add it to msg buffer
     def message(self, recepient, message):
-        # if recepient is currently active
-        if recepient in active_users:
-            client_threads[recepient].client_socket.sendall(f"{self.user}: {message}".encode("utf-8"))
 
+        # if the recepient has blocked the sender
+        if self.username in users[recepient]['blocked_users']:
+            self.client_socket.sendall(f"Your message could not be delivered as the recipient has blocked you".encode("utf-8"))
+            return
+
+        # if recepient is currently active
+        if users[recepient]['is_active']:
+            client_threads[recepient].client_socket.sendall(f"{self.user}: {message}".encode("utf-8"))
+        # else append to recepients message buffer which will be sent to client once offline user logs in
+        else:
+            users[recepient]['messages'].append(f"{self.username}: {message}")
 
 
     # return list of active users
@@ -101,6 +114,9 @@ class Client_thread(Thread):
         # send logout presence notification to active users
         for user in client_threads:
             client_threads[user].client_socket.sendall(f"{self.user} logged out".encode("utf-8"))
+        
+        # set user status to inactive
+        self.user_details['is_active'] = False
 
     def block_username(self, username):
         blocking_thread = Blocking_thread(username, block_duration)
@@ -157,20 +173,44 @@ class Client_thread(Thread):
                 # append username and password to credentials
                 f.write('\n' + username_input + ' ' + password_input)
                 f.close()
+                # add to users dict
+                users['username_input'] = {
+                    'is_active': False,
+                    'blocked_users' : [],
+                    'messages' : [],
+                }
                 print(f"Created new user: '{username_input}'")
             
             
             # send login confirmation to client and add username to list of active users
             self.client_socket.sendall("login successful".encode("utf-8"))
-            self.user = username_input
+            self.username = username_input
+            self.user_details = users[username_input]
+            self.user_details['is_active'] = True
             self.is_logged_in = True
 
             # send presence notifications to other active users then add new client 
             for user in client_threads:
-                client_threads[user].client_socket.sendall(f"{self.user} logged in".encode("utf-8"))
+                client_threads[user].client_socket.sendall(f"{self.username} logged in".encode("utf-8"))
 
-            client_threads[self.user] = self
-            active_users.append(self.user)
+            client_threads[self.username] = self
+            active_users.append(self.username)
+
+# Return dictionary of users when server starts up
+def bootstrap_users():
+    users = {}
+    with open('credentials.txt', 'r') as f:
+        for line in f:
+            credentials = line.split(' ')
+            if len(credentials) == 2:
+                # dictionary for each user
+                user = {
+                    'is_active': False,
+                    'blocked_users' : [],
+                    'messages' : [],
+                }
+                users[credentials[0]] = user
+    return users
 
 if __name__ == '__main__':
     # When command line ags are invalid
@@ -193,11 +233,11 @@ if __name__ == '__main__':
     # list of currently blocked users
     blocked_users = []
 
+    # dictionary of users
+    users = bootstrap_users()
+
     # dictionary of client threads where key = username and value = Client_thread
     client_threads = {}
-
-    # dictionary that holds messages; key = username and value = list of messages
-    messages = {}
 
     print("Starting server")
     while True:
@@ -206,7 +246,6 @@ if __name__ == '__main__':
         client_socket, client_address = server_socket.accept()
         client_thread = Client_thread(client_address, client_socket)
         client_thread.start()
-
 
     server_socket.close()
     print('Shutting down server')

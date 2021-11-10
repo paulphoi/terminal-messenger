@@ -113,6 +113,15 @@ if __name__ == '__main__':
                 print("You cannot send a message to yourself")
             else:
                 client_socket.sendall(input_string.encode("utf-8"))
+        # handle blocking
+        if (user_input[0] == "block"):
+            if len(user_input) < 2:
+                print("Usage: block <username>")
+            # if attempting to block self
+            elif user_input[2] == username:
+                print("You cannot block yourself")
+            else:
+                client_socket.sendall(input_string.encode("utf-8"))
 
 
     # call end in rcv_thread to stop listening and close the client_socket

@@ -58,6 +58,9 @@ class Client_thread(Thread):
                 if command == "whoelse":
                     self.whoelse()
 
+                if command_list[0] == "whoelsesince":
+                    self.whoelsesince(int(command_list[1]))
+
                 if command_list[0] == "broadcast":
                     self.broadcast(command[10:])
 
@@ -67,7 +70,8 @@ class Client_thread(Thread):
 
                 if command_list[0] == "block":
                     self.block_user(command_list[1])
-        except:
+        except Exception as e:
+            print(e)
             self.timeout()       
         
         # close socket
@@ -129,6 +133,55 @@ class Client_thread(Thread):
         self.client_socket.sendall(payload.encode("utf-8"))
         print(f"Sent list of active users to {self.username}")
 
+    # return list of active users within last <time> seconds
+    def whoelsesince(self, time):
+        # retrieve current time and current time - <time>
+        cur_time = datetime.datetime.now()
+        min_time = cur_time - datetime.timedelta(seconds=time)
+
+        # string with all users who were active within last <time> seconds
+        payload = ''
+
+        # return all users in login history if <time> is greater than how long the server has run
+        if min_time <= server_start_time:
+            for user in login_history:
+                # skip self
+                if user == self.username:
+                    continue
+                if self.username not in users[user]['blocked_users']:
+                    payload += f"\n{user}"
+            # Removing leading \n
+            if payload != '':
+                payload = payload.lstrip('\n')
+            self.client_socket.sendall(payload.encode("utf-8"))
+        else:
+            # iterate through login_history
+            for user in login_history:
+                if user == self.username:
+                    continue
+                # check that the user has not blocked the client
+                if self.username in users[user]['blocked_users']:
+                    continue
+                logout_time = login_history[user]['logout_time']
+                # if logout_time is None, user is currently active
+                if logout_time == None:
+                    payload += f"\n{user}"
+                else:
+                    if logout_time >= min_time:
+                        payload += f"\n{user}"
+            # Removing leading \n
+            if payload != '':
+                payload = payload.lstrip('\n')
+            self.client_socket.sendall(payload.encode("utf-8"))
+        print(f"Sent list of active users within last {time} seconds to {self.username}")
+
+
+        # obtain copy of active_users list
+        other_active_users = active_users.copy()
+        # Remove requesting user from copied list
+        other_active_users.remove(self.username)
+        # Send list of active users as \n separated string
+
     # broadcast message to all other users
     def broadcast(self, message):
         for user in client_threads:
@@ -152,6 +205,9 @@ class Client_thread(Thread):
         # remove from list of active users and client_threads
         active_users.remove(self.username)
         client_threads.pop(self.username)
+
+        # add logout time in login history
+        login_history[self.username]['logout_time'] = datetime.datetime.now()
 
         # send logout presence notification to active users
         for user in client_threads:
@@ -290,6 +346,8 @@ if __name__ == '__main__':
     # dictionary of client threads where key = username and value = Client_thread
     client_threads = {}
 
+    # server start time
+    server_start_time = datetime.datetime.now()
     print("Starting server")
     while True:
         # listen for new client connections and create new connection threads as required

@@ -33,6 +33,10 @@ class Client_thread(Thread):
     def run(self):
         # login client 
         self.login()
+        # end if login failed
+        if not self.is_logged_in:
+            return
+
         # send any messages that were sent to user when they were offline
         for message in self.user_details['messages']:
             self.client_socket.sendall(message.encode('utf-8'))
@@ -56,14 +60,35 @@ class Client_thread(Thread):
             if command_list[0] == "message":
                 message = ' '.join(command_list[2:])
                 self.message(command_list[1], message)
+            
+            if command_list[0] == "block":
+                self.block_user(command_list[1])
                 
         
         # close socket
         print("Close connection with: ", self.client_address)
         self.client_socket.close()
 
+    # blocks user
+    def block_user(self, user):
+        
+        # if user doesn't exist
+        if user not in users:
+            self.client_socket.sendall("Error: Attempting to block a username that doesn't exist".encode("utf-8"))
+        # if user is already blocked
+        elif user in self.user_details['blocked_users']:
+            self.client_socket.sendall("Error: Username is already blocked".encode("utf-8"))
+        else:
+            self.user_details['blocked_users'].append(user)
+            self.client_socket.sendall(f"{user} is blocked".encode("utf-8"))
+
     # sends message to recepient, if recepient is not active, add it to msg buffer
     def message(self, recepient, message):
+
+        # if user doesn't exist
+        if recepient not in users:
+            self.client_socket.sendall(f"'{recepient}' no such user".encode("utf-8"))
+            return
 
         # if the recepient has blocked the sender
         if self.username in users[recepient]['blocked_users']:
@@ -72,7 +97,7 @@ class Client_thread(Thread):
 
         # if recepient is currently active
         if users[recepient]['is_active']:
-            client_threads[recepient].client_socket.sendall(f"{self.user}: {message}".encode("utf-8"))
+            client_threads[recepient].client_socket.sendall(f"{self.username}: {message}".encode("utf-8"))
         # else append to recepients message buffer which will be sent to client once offline user logs in
         else:
             users[recepient]['messages'].append(f"{self.username}: {message}")
@@ -83,37 +108,44 @@ class Client_thread(Thread):
         # obtain copy of active_users list
         other_active_users = active_users.copy()
         # Remove requesting user from copied list
-        other_active_users.remove(self.user)
+        other_active_users.remove(self.username)
         # Send list of active users as \n separated string
         payload = ''
         for u in other_active_users:
-            print(u)
-            payload += f"\n{u}"
+            # check that the user has not blocked the client
+            if self.username not in users[u]['blocked_users']:
+                payload += f"\n{u}"
         # Removing leading \n
         if payload != '':
             payload = payload.lstrip('\n')
         self.client_socket.sendall(payload.encode("utf-8"))
-        print(f"Sent list of active users to {self.user}")
+        print(f"Sent list of active users to {self.username}")
 
     # broadcast message to all other users
     def broadcast(self, message):
         for user in client_threads:
+            # check that user has not blocked self
+            if self.username in users[user]['blocked_users']:
+                continue
+
             # don't broadcast to self
-            if user != self.user:
-                client_threads[user].client_socket.sendall(f"{self.user}: {message}".encode("utf-8"))
-        print(f"User {self.user} broadcasted message '{message}'")
+            if user != self.username:
+                client_threads[user].client_socket.sendall(f"{self.username}: {message}".encode("utf-8"))
+        print(f"User {self.username} broadcasted message '{message}'")
 
 
     def logout(self):
         self.is_logged_in = False
-        print(f"User {self.user} has logged out")
+        print(f"User {self.username} has logged out")
         # remove from list of active users and client_threads
-        active_users.remove(self.user)
-        client_threads.pop(self.user)
+        active_users.remove(self.username)
+        client_threads.pop(self.username)
 
         # send logout presence notification to active users
         for user in client_threads:
-            client_threads[user].client_socket.sendall(f"{self.user} logged out".encode("utf-8"))
+            # only send presence notifications if user has not blocked user
+            if self.username not in users[user]['blocked_users']:
+                client_threads[user].client_socket.sendall(f"{self.username} logged out".encode("utf-8"))
         
         # set user status to inactive
         self.user_details['is_active'] = False
@@ -174,7 +206,7 @@ class Client_thread(Thread):
                 f.write('\n' + username_input + ' ' + password_input)
                 f.close()
                 # add to users dict
-                users['username_input'] = {
+                users[username_input] = {
                     'is_active': False,
                     'blocked_users' : [],
                     'messages' : [],
@@ -191,7 +223,9 @@ class Client_thread(Thread):
 
             # send presence notifications to other active users then add new client 
             for user in client_threads:
-                client_threads[user].client_socket.sendall(f"{self.username} logged in".encode("utf-8"))
+                # only send to users who haven't blocked you
+                if self.username not in users[user]['blocked_users']:
+                    client_threads[user].client_socket.sendall(f"{self.username} logged in".encode("utf-8"))
 
             client_threads[self.username] = self
             active_users.append(self.username)

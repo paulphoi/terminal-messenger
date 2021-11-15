@@ -68,6 +68,7 @@ if __name__ == '__main__':
     # if username is currently blocked
     if message == "1":
         print("Entered username is currently blocked")
+        exit()
 
     # if username does not exist
     if message == "2":
@@ -118,7 +119,7 @@ if __name__ == '__main__':
             if len(user_input) < 2:
                 print("Usage: block <username>")
             # if attempting to block self
-            elif user_input[2] == username:
+            elif user_input[1] == username:
                 print("You cannot block yourself")
             else:
                 client_socket.sendall(input_string.encode("utf-8"))

@@ -242,6 +242,7 @@ class Client_thread(Thread):
             client_threads[self.username] = self
             #active_status = {'username' : self.username, 'online'}
             active_users.append(self.username)
+            login_history[self.username] = {'login_time' : datetime.datetime.now(), 'logout_time' : None}
 
 # Return dictionary of users when server starts up
 def bootstrap_users():
@@ -276,6 +277,9 @@ if __name__ == '__main__':
 
     # list of active users
     active_users = []
+
+    # login history where key = username and val = dict containing most recent login and logout timeƒ
+    login_history = {}
 
     # list of currently blocked users
     blocked_users = []

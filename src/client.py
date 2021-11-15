@@ -45,7 +45,7 @@ class Send_thread(Thread):
                 user_input = input_string.split(" ")
 
                 # break loop if logout command issued
-                if (user_input[0] == "logout"):
+                if user_input[0] == "logout":
                     if len(user_input) != 1:
                         print("Error. Invalid command")
                     else:
@@ -53,16 +53,25 @@ class Send_thread(Thread):
                         self.client_socket.sendall("logout".encode('utf-8'))
                         break
                 # handle whoelse 
-                if (user_input[0] == "whoelse"):
+                if user_input[0] == "whoelse":
                     if len(user_input) != 1:
                         print("Error. Invalid command")
                     else:
                         self.client_socket.sendall("whoelse".encode('utf-8'))
+                # handle whoelsesince
+                if user_input[0] == "whoelsesince":
+                    if len(user_input) != 2:
+                        print("Usage: whoelsesince <time>")
+                    else:
+                        if not user_input[1].isnumeric():
+                            print("<time> must be an integer")
+                        else:
+                            self.client_socket.sendall(input_string.encode("utf-8"))
                 # handle broadcast
-                if (user_input[0] == "broadcast"): 
+                if user_input[0] == "broadcast": 
                     self.client_socket.sendall(input_string.encode("utf-8"))
                 # handle message
-                if (user_input[0] == "message"):
+                if user_input[0] == "message":
                     if len(user_input) < 3:
                         print("Usage: message <user> <message>")
                     # if recepient is self print error
@@ -71,14 +80,15 @@ class Send_thread(Thread):
                     else:
                         self.client_socket.sendall(input_string.encode("utf-8"))
                 # handle blocking
-                if (user_input[0] == "block"):
-                    if len(user_input) < 2:
+                if user_input[0] == "block":
+                    if len(user_input) != 2:
                         print("Usage: block <username>")
                     # if attempting to block self
                     elif user_input[1] == username:
                         print("You cannot block yourself")
                     else:
                         self.client_socket.sendall(input_string.encode("utf-8"))
+                
         except Exception as e:
             print(e)
     

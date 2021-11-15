@@ -240,6 +240,7 @@ class Client_thread(Thread):
                     client_threads[user].client_socket.sendall(f"{self.username} logged in".encode("utf-8"))
 
             client_threads[self.username] = self
+            #active_status = {'username' : self.username, 'online'}
             active_users.append(self.username)
 
 # Return dictionary of users when server starts up

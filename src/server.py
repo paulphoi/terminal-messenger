@@ -38,32 +38,37 @@ class Client_thread(Thread):
             return
 
         # send any messages that were sent to user when they were offline
-        for message in self.user_details['messages']:
-            self.client_socket.sendall(message.encode('utf-8'))
+        self.client_socket.sendall(self.user_details['messages'].encode('utf-8'))
+        self.user_details['messages'] = ''
+
+        # set timeout
+        self.client_socket.settimeout(timeout)
 
         # Process commands
-        while self.is_alive and self.is_logged_in:
-            data = self.client_socket.recv(1024)
-            command = data.decode()
-            command_list = command.split(" ")
+        try:
+            while self.is_alive and self.is_logged_in:
+                data = self.client_socket.recv(1024)
+                command = data.decode()
+                command_list = command.split(" ")
 
-            # handle logout
-            if command == "logout":
-                self.logout()
-            
-            if command == "whoelse":
-                self.whoelse()
+                # handle logout
+                if command == "logout":
+                    self.logout()
 
-            if command_list[0] == "broadcast":
-                self.broadcast(command[10:])
-            
-            if command_list[0] == "message":
-                message = ' '.join(command_list[2:])
-                self.message(command_list[1], message)
-            
-            if command_list[0] == "block":
-                self.block_user(command_list[1])
-                
+                if command == "whoelse":
+                    self.whoelse()
+
+                if command_list[0] == "broadcast":
+                    self.broadcast(command[10:])
+
+                if command_list[0] == "message":
+                    message = ' '.join(command_list[2:])
+                    self.message(command_list[1], message)
+
+                if command_list[0] == "block":
+                    self.block_user(command_list[1])
+        except:
+            self.timeout()       
         
         # close socket
         print("Close connection with: ", self.client_address)
@@ -100,7 +105,10 @@ class Client_thread(Thread):
             client_threads[recepient].client_socket.sendall(f"{self.username}: {message}".encode("utf-8"))
         # else append to recepients message buffer which will be sent to client once offline user logs in
         else:
-            users[recepient]['messages'].append(f"{self.username}: {message}")
+            if users[recepient]['messages'] == '':
+                users[recepient]['messages'] += f"{self.username}: {message}"
+            else:
+                users[recepient]['messages'] += f"\n{self.username}: {message}"
 
 
     # return list of active users
@@ -133,10 +141,14 @@ class Client_thread(Thread):
                 client_threads[user].client_socket.sendall(f"{self.username}: {message}".encode("utf-8"))
         print(f"User {self.username} broadcasted message '{message}'")
 
+    def timeout(self):
+        print(f"User {self.username} has timed out")
+        # call logout function 
+        self.logout()
 
     def logout(self):
         self.is_logged_in = False
-        print(f"User {self.username} has logged out")
+        print(f"Logged out user {self.username}")
         # remove from list of active users and client_threads
         active_users.remove(self.username)
         client_threads.pop(self.username)
@@ -209,7 +221,7 @@ class Client_thread(Thread):
                 users[username_input] = {
                     'is_active': False,
                     'blocked_users' : [],
-                    'messages' : [],
+                    'messages' : '',
                 }
                 print(f"Created new user: '{username_input}'")
             
@@ -241,7 +253,7 @@ def bootstrap_users():
                 user = {
                     'is_active': False,
                     'blocked_users' : [],
-                    'messages' : [],
+                    'messages' : '',
                 }
                 users[credentials[0]] = user
     return users

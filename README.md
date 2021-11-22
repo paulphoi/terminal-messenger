@@ -1,1 +1,1 @@
-# unix-messenger
+# terminal-messenger
